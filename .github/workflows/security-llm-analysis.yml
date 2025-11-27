@@ -14,8 +14,10 @@ jobs:
     runs-on: ubuntu-latest
 
     permissions:
-      pull-requests: write
+      pull-requests: read
+      issues: write
       contents: read
+      models: read
 
     steps:
       - name: Checkout repository
@@ -41,33 +43,27 @@ jobs:
           encoded=$(base64 -w 0 diff.txt)
           echo "text=$encoded" >> $GITHUB_OUTPUT
 
-      - name: Send code to GitHub LLM
-        id: llm
+      - name: Install gh-models extension
+        run: gh extension install https://github.com/github/gh-models
         env:
           GH_TOKEN: ${{ secrets.GITHUB_TOKEN }}
-        run: |
+
+      - name: Use GH model to check for code vulnerabilities
+        env:
+          GH_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+        run: |-
           # Decode base64 safely
           diff_decoded=$(echo "${{ steps.encoded.outputs.text }}" | base64 -d)
-
           echo "diff_decoded=$diff_decoded"
 
           # Safely escape the diff for JSON using jq
           diff_json=$(printf "%s" "$diff_decoded" | jq -R -s .)
-
-          # Call GitHub Models API
-          response=$(gh api -X POST \
-            repos/AFKeeWoonTan/juice-shop/actions/llm \
-            -f model="gpt-4o-mini" \
-            -f messages='[
-              {"role": "system", "content": "You are an application security expert. Identify vulnerabilities in all code, including dead code, test-only code, and any code snippets that might be unsafe if re-enabled. Explain why each issue is a risk and propose remediation steps."},
-              {"role": "user", "content": "'"$diff_json"'"}
-            ]')
-
-          # Multi-line output syntax
-          echo "analysis<<EOF" >> $GITHUB_OUTPUT
-          echo "$response" >> $GITHUB_OUTPUT
-          echo "EOF" >> $GITHUB_OUTPUT
+          echo "diff_json=$diff_json"
+          
+          # Generate a summary using the model by reading from file
+          echo $diff_json | gh models run xai/grok-3-mini \
+            "You are an application security expert. Identify vulnerabilities in all code, including dead code, test-only code, and any code snippets that might be unsafe if re-enabled. Explain why each issue is a risk and propose remediation steps." > review.md
 
       - name: Show LLM analysis
         run: |
-          echo "${{ steps.llm.outputs.analysis }}"
+          cat review.md
