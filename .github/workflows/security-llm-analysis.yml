@@ -47,16 +47,6 @@ jobs:
           # Decode base64 safely
           diff_decoded=$(echo "${{ steps.encoded.outputs.text }}" | base64 -d)
 
-          # Safely escape the diff for JSON using jq
-          diff_json=$(printf "%s" "$diff_decoded" | jq -R -s .)
-
-          echo "diff_json=$diff_json"
-
-      - name: Send code to GitHub LLM
-        id: llm
-        run: |
-          diff_decoded=$(echo "${{ steps.encoded.outputs.text }}" | base64 -d)
-
           echo "diff_decoded=$diff_decoded"
 
           # Safely escape the diff for JSON using jq

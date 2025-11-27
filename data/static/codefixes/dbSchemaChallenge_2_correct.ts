@@ -3,7 +3,7 @@ export function searchProducts () {
     let criteria: any = req.query.q === 'undefined' ? '' : req.query.q ?? ''
     criteria = (criteria.length <= 200) ? criteria : criteria.substring(0, 200)
 
-    // DEAD CODE but intentionally vulnerable for LLM Security Analysis workflow. id 3
+    // DEAD CODE but intentionally vulnerable for LLM Security Analysis workflow. id 4
     // Static analysis will flag this, but it never executes.
     if (false) {
       const vulnerableQuery = `
