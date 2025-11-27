@@ -29,22 +29,22 @@ jobs:
           git fetch origin master:test-master
           git diff test-master...HEAD --unified=0 > diff.txt
 
-          # Encode the diff for GitHub Actions output
-          diff_content=$(sed 's/%/%25/g; s/\r/%0D/g; s/\n/%0A/g' diff.txt)
-
-          echo "diff<<EOF" >> "$GITHUB_OUTPUT"
-          echo "$diff_content" >> "$GITHUB_OUTPUT"
-          echo "EOF" >> "$GITHUB_OUTPUT"
+          # Use GitHub Actions multiline output syntax
+          echo "diff<<EOF" >> $GITHUB_OUTPUT
+          cat diff.txt >> $GITHUB_OUTPUT
+          echo "EOF" >> $GITHUB_OUTPUT
 
       - name: Base64 encode diff output
         id: encoded
         run: |
-          encoded=$(printf "%s" "${{ steps.diff.outputs.diff }}" | base64 -w 0)
+          # Read the diff output safely from file (avoid ${} expansion)
+          encoded=$(base64 -w 0 diff.txt)
           echo "text=$encoded" >> $GITHUB_OUTPUT
 
       - name: Send code to GitHub Model for analysis
         id: llm
         run: |
+          # Decode safely
           diff_decoded=$(echo "${{ steps.encoded.outputs.text }}" | base64 -d)
 
           response=$(curl -s -X POST \
