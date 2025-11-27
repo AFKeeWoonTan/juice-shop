@@ -29,13 +29,24 @@ jobs:
           git fetch origin master:test-master
           git diff test-master...HEAD --unified=0 > diff.txt
 
-          echo "diff<<EOF" >> $GITHUB_OUTPUT
-          cat diff.txt >> $GITHUB_OUTPUT
-          echo "EOF" >> $GITHUB_OUTPUT
+          # Encode the diff for GitHub Actions output
+          diff_content=$(sed 's/%/%25/g; s/\r/%0D/g; s/\n/%0A/g' diff.txt)
+
+          echo "diff<<EOF" >> "$GITHUB_OUTPUT"
+          echo "$diff_content" >> "$GITHUB_OUTPUT"
+          echo "EOF" >> "$GITHUB_OUTPUT"
+
+      - name: Base64 encode diff output
+        id: encoded
+        run: |
+          encoded=$(printf "%s" "${{ steps.diff.outputs.diff }}" | base64 -w 0)
+          echo "text=$encoded" >> $GITHUB_OUTPUT
 
       - name: Send code to GitHub Model for analysis
         id: llm
         run: |
+          diff_decoded=$(echo "${{ steps.encoded.outputs.text }}" | base64 -d)
+
           response=$(curl -s -X POST \
             -H "Authorization: Bearer ${{ secrets.GITHUB_TOKEN }}" \
             -H "Content-Type: application/json" \
@@ -46,15 +57,9 @@ jobs:
                 \"content\": \"You are an application security expert. Identify vulnerabilities in the provided Juice Shop code diff and propose fixes.\"
               },{
                 \"role\": \"user\",
-                \"content\": \"Analyze the following code diff for security issues and remediation steps:\n${{ steps.diff.outputs.diff }}\"
+                \"content\": \"Analyze the following code diff for security issues and remediation steps:\n$diff_decoded\"
               }]
             }" \
             https://api.github.com/models)
 
           echo "analysis=$response" >> $GITHUB_OUTPUT
-
-      - name: Comment on PR
-        uses: marocchino/sticky-pull-request-comment@v2
-        with:
-          header: LLM Security Analysis
-          message: ${{ steps.llm.outputs.analysis }}
