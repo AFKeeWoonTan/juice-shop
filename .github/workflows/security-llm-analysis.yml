@@ -73,3 +73,7 @@ jobs:
           echo "analysis<<EOF" >> $GITHUB_OUTPUT
           echo "$response" >> $GITHUB_OUTPUT
           echo "EOF" >> $GITHUB_OUTPUT
+          
+      - name: Show LLM analysis
+        run: |
+          echo "${{ steps.llm.outputs.analysis }}"
