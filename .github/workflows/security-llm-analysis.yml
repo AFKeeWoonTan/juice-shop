@@ -41,39 +41,6 @@ jobs:
           encoded=$(base64 -w 0 diff.txt)
           echo "text=$encoded" >> $GITHUB_OUTPUT
 
-      - name: Send code to GitHub Model for analysis
-        id: llm
-        run: |
-          # Decode base64 safely
-          diff_decoded=$(echo "${{ steps.encoded.outputs.text }}" | base64 -d)
-
-          # Safely escape the diff for JSON using jq
-          diff_json=$(printf "%s" "$diff_decoded" | jq -R -s .)
-
-          # Send request to GitHub Models API
-          response=$(curl -s -X POST \
-            -H "Authorization: Bearer ${{ secrets.GITHUB_TOKEN }}" \
-            -H "Content-Type: application/json" \
-            -d "{
-              \"model\": \"gpt-4o-mini\",
-              \"messages\": [
-                {
-                  \"role\": \"system\",
-                  \"content\": \"You are an application security expert. Identify vulnerabilities in all code, including dead code, test-only code, and any code snippets that might be unsafe if re-enabled. Explain why each issue is a risk and propose remediation steps.\"
-                },
-                {
-                  \"role\": \"user\",
-                  \"content\": $diff_json
-                }
-              ]
-            }" \
-            https://api.github.com/models)
-
-          # Multi-line output syntax
-          echo "analysis<<EOF" >> $GITHUB_OUTPUT
-          echo "$response" >> $GITHUB_OUTPUT
-          echo "EOF" >> $GITHUB_OUTPUT
-
       - name: Send code to GitHub LLM
         id: llm
         run: |
