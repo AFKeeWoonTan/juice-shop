@@ -43,6 +43,8 @@ jobs:
 
       - name: Send code to GitHub LLM
         id: llm
+        env:
+          GH_TOKEN: ${{ secrets.GITHUB_TOKEN }}
         run: |
           # Decode base64 safely
           diff_decoded=$(echo "${{ steps.encoded.outputs.text }}" | base64 -d)
