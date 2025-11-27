@@ -47,6 +47,7 @@ jobs:
           # Decode safely
           diff_decoded=$(echo "${{ steps.encoded.outputs.text }}" | base64 -d)
 
+          # Send request to GitHub Models API
           response=$(curl -s -X POST \
             -H "Authorization: Bearer ${{ secrets.GITHUB_TOKEN }}" \
             -H "Content-Type: application/json" \
@@ -62,4 +63,7 @@ jobs:
             }" \
             https://api.github.com/models)
 
-          echo "analysis=$response" >> $GITHUB_OUTPUT
+          # Multi-line output syntax
+          echo "analysis<<EOF" >> $GITHUB_OUTPUT
+          echo "$response" >> $GITHUB_OUTPUT
+          echo "EOF" >> $GITHUB_OUTPUT
