@@ -21,7 +21,7 @@ jobs:
       - name: Checkout repository
         uses: actions/checkout@v4
         with:
-          fetch-depth: 0   # Important, we need history
+          fetch-depth: 0   # Need full history for diff
 
       - name: Extract modified code
         id: diff
@@ -29,23 +29,26 @@ jobs:
           git fetch origin master:test-master
           git diff test-master...HEAD --unified=0 > diff.txt
 
-          # Use GitHub Actions multiline output syntax
+          # GitHub Actions multiline output syntax
           echo "diff<<EOF" >> $GITHUB_OUTPUT
           cat diff.txt >> $GITHUB_OUTPUT
           echo "EOF" >> $GITHUB_OUTPUT
 
-      - name: Base64 encode diff output
+      - name: Base64 encode diff output safely
         id: encoded
         run: |
-          # Read the diff output safely from file (avoid ${} expansion)
+          # Base64 encode diff.txt safely
           encoded=$(base64 -w 0 diff.txt)
           echo "text=$encoded" >> $GITHUB_OUTPUT
 
       - name: Send code to GitHub Model for analysis
         id: llm
         run: |
-          # Decode safely
+          # Decode base64 safely
           diff_decoded=$(echo "${{ steps.encoded.outputs.text }}" | base64 -d)
+
+          # Safely escape the diff for JSON using jq
+          diff_json=$(printf "%s" "$diff_decoded" | jq -R -s .)
 
           # Send request to GitHub Models API
           response=$(curl -s -X POST \
@@ -53,13 +56,16 @@ jobs:
             -H "Content-Type: application/json" \
             -d "{
               \"model\": \"gpt-4o-mini\",
-              \"messages\": [{
-                \"role\": \"system\",
-                \"content\": \"You are an application security expert. Identify vulnerabilities in the provided Juice Shop code diff and propose fixes.\"
-              },{
-                \"role\": \"user\",
-                \"content\": \"Analyze the following code diff for security issues and remediation steps:\n$diff_decoded\"
-              }]
+              \"messages\": [
+                {
+                  \"role\": \"system\",
+                  \"content\": \"You are an application security expert. Identify vulnerabilities in all code, including dead code, test-only code, and any code snippets that might be unsafe if re-enabled. Explain why each issue is a risk and propose remediation steps.\"
+                },
+                {
+                  \"role\": \"user\",
+                  \"content\": $diff_json
+                }
+              ]
             }" \
             https://api.github.com/models)
 
