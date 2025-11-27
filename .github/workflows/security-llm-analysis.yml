@@ -1,10 +1,11 @@
 name: LLM Security Analysis
 
 on:
-  pull_request:
+  push:
+    branches:
+      - test-llm
     paths:
       - "**/*.js"
-      - "**/*.ts"
       - "**/*.ts"
       - "**/*.html"
 
@@ -19,12 +20,15 @@ jobs:
     steps:
       - name: Checkout repository
         uses: actions/checkout@v4
+        with:
+          fetch-depth: 0   # Important, we need history
 
       - name: Extract modified code
         id: diff
         run: |
-          git fetch origin main
-          git diff origin/main --unified=0 > diff.txt
+          git fetch origin master:test-master
+          git diff test-master...HEAD --unified=0 > diff.txt
+
           echo "diff<<EOF" >> $GITHUB_OUTPUT
           cat diff.txt >> $GITHUB_OUTPUT
           echo "EOF" >> $GITHUB_OUTPUT
@@ -46,7 +50,7 @@ jobs:
               }]
             }" \
             https://api.github.com/models)
-          
+
           echo "analysis=$response" >> $GITHUB_OUTPUT
 
       - name: Comment on PR
@@ -54,4 +58,3 @@ jobs:
         with:
           header: LLM Security Analysis
           message: ${{ steps.llm.outputs.analysis }}
-
