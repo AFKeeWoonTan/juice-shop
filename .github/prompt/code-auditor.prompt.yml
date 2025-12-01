@@ -1,0 +1,38 @@
+name: Code Auditor
+description: Checks code block for security vulnerabilities
+model: openai/gpt-4o-mini
+modelParameters:
+  temperature: 0.0
+
+inputParameters:
+  - name: code_block
+    type: string
+    required: true
+
+messages:
+  - role: system
+    content: |
+      You are an application security expert. You will be given a code snippet from a web application. Identify any security vulnerabilities (injection, authentication, authorization, business logic, crypto misuse) and provide:
+      1. Type of vulnerability
+      2. Severity (Low / Medium / High / Critical)
+      3. Affected code lines
+      4. Recommendation to fix the issue
+  - role: user
+    content: |
+      Here is the code snippet:
+      {{code_block}}
+
+testData:
+  - input:
+      code_block: |
+        const vulnerableQuery = `
+          SELECT * FROM Products
+          WHERE name LIKE '%${criteria}%'
+        `;
+        models.sequelize.query(vulnerableQuery);
+    expected: Response must mention SQL Injection vulnerability (case insensitive)
+
+evaluators:
+  - name: Should mention SQL injection vulnerability (case-insensitive)
+    type: regex
+    pattern: (?i)sql injection vulnerability
