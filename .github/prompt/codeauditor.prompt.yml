@@ -16,7 +16,7 @@ messages:
       Here is the code snippet:  
       {{code_block}}
 testData:
-  - input: |
+  - code_block: |
       const vulnerableQuery = `
         SELECT * FROM Products
         WHERE name LIKE '%${criteria}%'
