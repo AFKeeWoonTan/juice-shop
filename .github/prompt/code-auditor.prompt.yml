@@ -4,11 +4,6 @@ model: openai/gpt-4o-mini
 modelParameters:
   temperature: 0.0
 
-inputParameters:
-  - name: code_block
-    type: string
-    required: true
-
 messages:
   - role: system
     content: |
@@ -23,13 +18,12 @@ messages:
       {{code_block}}
 
 testData:
-  - input:
-      code_block: |
-        const vulnerableQuery = `
-          SELECT * FROM Products
-          WHERE name LIKE '%${criteria}%'
-        `;
-        models.sequelize.query(vulnerableQuery);
+    code_block: |
+      const vulnerableQuery = `
+        SELECT * FROM Products
+        WHERE name LIKE '%${criteria}%'
+      `;
+      models.sequelize.query(vulnerableQuery);
     expected: Response must mention SQL Injection vulnerability (case insensitive)
 
 evaluators:
